@@ -16,6 +16,11 @@ type User struct {
 }
 
 type UserResponse struct {
+	UID  string `json:"uid,omitempty"`
+	Role string `json:"role,omitempty"`
+}
+
+type UserJson struct {
 	UID    string `json:"uid,omitempty"`
 	RoleId string `json:"role_id,omitempty"`
 }
@@ -42,7 +47,7 @@ func (u *UsersModel) List(ctx context.Context) (users []UserResponse, err error)
 
 		err = rows.Scan(
 			&user.UID,
-			&user.RoleId,
+			&user.Role,
 		)
 		if err != nil {
 			return nil, err
@@ -70,7 +75,7 @@ func (u *UsersModel) Get(ctx context.Context, uid string) (user UserResponse, er
 
 	err = u.DB.QueryRow(ctx, query, args...).Scan(
 		&user.UID,
-		&user.RoleId,
+		&user.Role,
 	)
 
 	return user, err
