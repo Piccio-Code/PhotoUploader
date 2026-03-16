@@ -1,6 +1,7 @@
 package server
 
 import (
+	"PhotoUploader/internal/database"
 	"context"
 	firebase "firebase.google.com/go/v4"
 	"firebase.google.com/go/v4/auth"
@@ -21,6 +22,7 @@ import (
 type Server struct {
 	port       int
 	dbPool     *pgxpool.Pool
+	models     database.Models
 	authClient *auth.Client
 	infoLog    *log.Logger
 }
@@ -52,12 +54,15 @@ func NewServer() *http.Server {
 		log.Fatal(err)
 	}
 
+	models := database.NewModels(dbPool)
+
 	infoPrefix := color.New(color.FgCyan, color.Bold).SprintFunc()("[INFO]: \t")
 	infoLog := log.New(os.Stdout, infoPrefix, log.LstdFlags|log.Lshortfile)
 
 	NewServer := &Server{
 		port:       port,
 		dbPool:     dbPool,
+		models:     models,
 		authClient: authClient,
 		infoLog:    infoLog,
 	}

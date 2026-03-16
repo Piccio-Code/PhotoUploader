@@ -16,19 +16,20 @@ type User struct {
 }
 
 type UserResponse struct {
-	Email string `json:"email,omitempty"`
-	Role  string `json:"role,omitempty"`
+	UID    string `json:"uid,omitempty"`
+	RoleId string `json:"role_id,omitempty"`
 }
 
-func (u *UsersModel) List(ctx context.Context) (users []User, err error) {
+func (u *UsersModel) List(ctx context.Context) (users []UserResponse, err error) {
 
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 
 	query := `
-		SELECT uid, role_id
-		FROM users
-	`
+		SELECT u.uid, r.role
+		FROM users u
+		JOIN user_roles r ON u.role_id = r.id
+		`
 
 	rows, err := u.DB.Query(ctx, query)
 	if err != nil {
@@ -37,7 +38,7 @@ func (u *UsersModel) List(ctx context.Context) (users []User, err error) {
 	defer rows.Close()
 
 	for rows.Next() {
-		var user User
+		var user UserResponse
 
 		err = rows.Scan(
 			&user.UID,
@@ -53,16 +54,17 @@ func (u *UsersModel) List(ctx context.Context) (users []User, err error) {
 	return users, rows.Err()
 }
 
-func (u *UsersModel) Get(ctx context.Context, uid string) (user User, err error) {
+func (u *UsersModel) Get(ctx context.Context, uid string) (user UserResponse, err error) {
 
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 
 	query := `
-		SELECT uid, role_id
-		FROM users
-		WHERE uid = $1
-	`
+		SELECT u.uid, r.role
+		FROM users u
+		JOIN user_roles r ON u.role_id = r.id
+		WHERE u.uid = $1
+		`
 
 	args := []interface{}{uid}
 
@@ -82,7 +84,7 @@ func (u *UsersModel) Create(ctx context.Context, user User) error {
 	query := `
 		INSERT INTO users (uid, role_id)
 		VALUES ($1, $2)
-	`
+		`
 
 	args := []interface{}{
 		user.UID,
@@ -102,7 +104,7 @@ func (u *UsersModel) Update(ctx context.Context, user User) error {
 		UPDATE users
 		SET role_id = $1
 		WHERE uid = $2
-	`
+		`
 
 	args := []interface{}{
 		user.RoleId,
@@ -121,7 +123,7 @@ func (u *UsersModel) Delete(ctx context.Context, uid string) error {
 	query := `
 		DELETE FROM users
 		WHERE uid = $1
-	`
+		`
 
 	args := []interface{}{uid}
 
