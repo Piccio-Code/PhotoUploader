@@ -2,23 +2,48 @@ package server
 
 import (
 	"context"
+	firebase "firebase.google.com/go/v4"
+	"firebase.google.com/go/v4/auth"
 	"fmt"
+	"github.com/fatih/color"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"google.golang.org/api/option"
 	"log"
 	"net/http"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	_ "github.com/joho/godotenv/autoload"
 )
 
 type Server struct {
-	port   int
-	dbPool *pgxpool.Pool
+	port       int
+	dbPool     *pgxpool.Pool
+	authClient *auth.Client
+	infoLog    *log.Logger
 }
 
 func NewServer() *http.Server {
+	opt := option.WithCredentialsFile("FirebaseAdminCredential.json")
+	firebaseClient, err := firebase.NewApp(context.Background(), nil, opt)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	authClient, err := firebaseClient.Auth(context.Background())
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	err = SetAdmin(authClient)
+
+	if err != nil {
+		log.Fatalf("error setting admins %v\n", err)
+	}
 
 	port, _ := strconv.Atoi(os.Getenv("PORT"))
 	dbPool, err := NewPool()
@@ -27,9 +52,14 @@ func NewServer() *http.Server {
 		log.Fatal(err)
 	}
 
+	infoPrefix := color.New(color.FgCyan, color.Bold).SprintFunc()("[INFO]: \t")
+	infoLog := log.New(os.Stdout, infoPrefix, log.LstdFlags|log.Lshortfile)
+
 	NewServer := &Server{
-		port:   port,
-		dbPool: dbPool,
+		port:       port,
+		dbPool:     dbPool,
+		authClient: authClient,
+		infoLog:    infoLog,
 	}
 
 	// Declare Server config
@@ -57,4 +87,19 @@ func NewPool() (pool *pgxpool.Pool, err error) {
 	}
 
 	return pool, nil
+}
+
+func SetAdmin(authClient *auth.Client) error {
+	adminUIDs := strings.Split(os.Getenv("UID_ADMIN_USERS"), ",")
+
+	for _, adminUID := range adminUIDs {
+		claims := map[string]interface{}{"admin": true}
+		err := authClient.SetCustomUserClaims(context.Background(), strings.TrimSpace(adminUID), claims)
+
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }

@@ -11,7 +11,7 @@ func TestHelloWorldHandler(t *testing.T) {
 	s := &Server{}
 	r := gin.New()
 	r.GET("/", s.HelloWorldHandler)
-	// Create a test HTTP request
+	// Create a test HTTP rwequest
 	req, err := http.NewRequest("GET", "/", nil)
 	if err != nil {
 		t.Fatal(err)

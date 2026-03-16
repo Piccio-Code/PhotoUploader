@@ -2,11 +2,11 @@ package server
 
 import (
 	"fmt"
-	"log"
-	"net/http"
-
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"log"
+	"net/http"
 )
 
 func (s *Server) RegisterRoutes() http.Handler {
@@ -19,19 +19,42 @@ func (s *Server) RegisterRoutes() http.Handler {
 		AllowCredentials: true,
 	}))
 
-	r.POST("/test", s.HelloWorldHandler)
+	r.Use(MetricsMiddleware())
+
+	v1 := r.Group("/api/v1")
+
+	{
+		v1.GET("/metrics", gin.WrapH(promhttp.Handler()))
+
+		protected := v1.Group("")
+		{
+			protected.Use(s.AuthMiddleware())
+
+			protected.POST("/test", s.HelloWorldHandler)
+		}
+
+	}
 
 	return r
 }
 
-type Test struct {
-	Name string `binding:"Name"`
-}
-
 func (s *Server) HelloWorldHandler(c *gin.Context) {
-	file, _ := c.FormFile("file")
+
+	file, err := c.FormFile("file")
+
+	if err != nil {
+		s.infoLog.Println(err)
+		s.Fail(c, http.StatusBadRequest, "Error Retrieving The File From Body")
+		return
+	}
 
 	log.Println(file.Filename)
-	c.SaveUploadedFile(file, "./files/"+file.Filename)
+	err = c.SaveUploadedFile(file, "./files/"+file.Filename)
+
+	if err != nil {
+		s.infoLog.Println(err)
+		s.Fail(c, http.StatusBadRequest, "Error Uploading The File")
+		return
+	}
 	c.String(http.StatusOK, fmt.Sprintf("'%s' uploaded!", file.Filename))
 }
