@@ -98,7 +98,7 @@ func SetAdmin(authClient *auth.Client) error {
 	adminUIDs := strings.Split(os.Getenv("UID_ADMIN_USERS"), ",")
 
 	for _, adminUID := range adminUIDs {
-		claims := map[string]interface{}{"admin": true}
+		claims := map[string]interface{}{"role": "admin"}
 		err := authClient.SetCustomUserClaims(context.Background(), strings.TrimSpace(adminUID), claims)
 
 		if err != nil {
