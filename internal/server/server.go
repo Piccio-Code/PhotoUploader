@@ -95,7 +95,7 @@ func NewPool() (pool *pgxpool.Pool, err error) {
 }
 
 func SetAdmin(authClient *auth.Client) error {
-	adminUIDs := strings.Split(os.Getenv("UID_ADMIN_USERS"), ",")
+	adminUIDs := strings.Split(os.Getenv("UID_ADMIN_USER"), ",")
 
 	for _, adminUID := range adminUIDs {
 		claims := map[string]interface{}{"role": "admin"}
