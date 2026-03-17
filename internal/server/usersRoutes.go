@@ -17,18 +17,14 @@ type UserResponse struct {
 	Role     string `json:"role,omitempty"`
 }
 
-type UserRequest struct {
-	UID  string `json:"uid,omitempty" binding:"required"`
-	Role string `json:"-,omitempty"`
-}
-
 func (s *Server) registerUserRoute(rg *gin.RouterGroup) {
 	users := rg.Group("/users")
 	{
 		users.Use(s.AdminMiddleware())
 		users.GET("/list", s.ListUsersHandler)
 
-		users.POST("/editor", s.CreateEditorHandler)
+		users.POST(":uid/editor", s.CreateEditorHandler)
+		users.DELETE(":uid/editor", s.RemoveEditorHandler)
 	}
 
 }
@@ -72,25 +68,18 @@ func (s *Server) ListUsersHandler(c *gin.Context) {
 }
 
 func (s *Server) CreateEditorHandler(c *gin.Context) {
-	var newEditor UserRequest
-	if err := c.ShouldBindJSON(&newEditor); err != nil {
-		s.infoLog.Printf("the json %v isn't valid", newEditor)
-		s.infoLog.Printf("error: %v", err)
-		s.Fail(c, http.StatusBadRequest, "Error binding the json")
-		return
-	}
+	uid := c.Param("uid")
+	role := "editor"
 
-	newEditor.Role = "editor"
-
-	claims := map[string]interface{}{"role": newEditor.Role}
-	err := s.authClient.SetCustomUserClaims(context.Background(), newEditor.UID, claims)
+	claims := map[string]interface{}{"role": role}
+	err := s.authClient.SetCustomUserClaims(context.Background(), uid, claims)
 	if err != nil {
 		s.infoLog.Printf("error: %v", err)
 		s.Fail(c, http.StatusBadRequest, "Error adding the role editor to the user")
 		return
 	}
 
-	userFirebase, err := s.authClient.GetUser(context.Background(), newEditor.UID)
+	userFirebase, err := s.authClient.GetUser(context.Background(), uid)
 
 	if err != nil {
 		s.infoLog.Printf("error: %v", err)
@@ -109,6 +98,20 @@ func (s *Server) CreateEditorHandler(c *gin.Context) {
 	s.Created(c, envelop{"new_editor": user})
 }
 
+func (s *Server) RemoveEditorHandler(c *gin.Context) {
+	uid := c.Param("uid")
+
+	claims := map[string]interface{}{}
+	err := s.authClient.SetCustomUserClaims(context.Background(), uid, claims)
+	if err != nil {
+		s.infoLog.Printf("error: %v", err)
+		s.Fail(c, http.StatusBadRequest, "Error adding the role editor to the user")
+		return
+	}
+
+	s.Delete(c)
+}
+
 func (s *Server) FromFirebaseUserToResponse(userFirebase *auth.UserRecord) (user UserResponse, err error) {
 
 	roleC, ok := userFirebase.CustomClaims["role"]
@@ -116,6 +119,8 @@ func (s *Server) FromFirebaseUserToResponse(userFirebase *auth.UserRecord) (user
 
 	if ok {
 		role, ok = roleC.(string)
+
+		s.infoLog.Println(role)
 
 		if !ok {
 			return UserResponse{}, errors.New("error converting the role to string")

@@ -29,6 +29,7 @@ func (s *Server) RegisterRoutes() http.Handler {
 		protected := v1.Group("")
 		{
 			protected.Use(s.AuthMiddleware())
+
 			s.registerUserRoute(protected)
 		}
 
