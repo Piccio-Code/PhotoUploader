@@ -29,8 +29,7 @@ func (s *Server) RegisterRoutes() http.Handler {
 		protected := v1.Group("")
 		{
 			protected.Use(s.AuthMiddleware())
-
-			protected.POST("/test", s.HelloWorldHandler)
+			s.registerUserRoute(protected)
 		}
 
 	}
