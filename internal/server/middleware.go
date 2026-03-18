@@ -31,7 +31,7 @@ func (s *Server) AdminMiddleware() gin.HandlerFunc {
 			role, ok := roleC.(string)
 
 			if !ok {
-				s.infoLog.Println("roles conversion problem")
+				s.infoLog.Println("role conversion problem")
 				s.Fail(c, http.StatusUnauthorized, "Unauthorized User")
 				c.Abort()
 				return
@@ -39,6 +39,46 @@ func (s *Server) AdminMiddleware() gin.HandlerFunc {
 
 			if role != "admin" {
 				s.infoLog.Println("admin auth problem")
+				s.Fail(c, http.StatusUnauthorized, "Unauthorized User")
+				c.Abort()
+				return
+			}
+		}
+
+		c.Next()
+	}
+}
+
+func (s *Server) EditorMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		userC, ok := c.Get(UserKey)
+
+		if !ok {
+			s.Fail(c, http.StatusUnauthorized, "Unauthorized User")
+			c.Abort()
+			return
+		}
+
+		user, ok := userC.(*auth.UserRecord)
+
+		if !ok {
+			s.Fail(c, http.StatusUnauthorized, "Unauthorized User")
+			c.Abort()
+			return
+		}
+
+		if roleC, ok := user.CustomClaims["role"]; ok {
+			role, ok := roleC.(string)
+
+			if !ok {
+				s.infoLog.Println("role conversion problem")
+				s.Fail(c, http.StatusUnauthorized, "Unauthorized User")
+				c.Abort()
+				return
+			}
+
+			if role != "admin" && role != "editor" {
+				s.infoLog.Println("role auth problem, the role isn't admin or editor")
 				s.Fail(c, http.StatusUnauthorized, "Unauthorized User")
 				c.Abort()
 				return
