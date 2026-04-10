@@ -1,11 +1,9 @@
 package server
 
 import (
-	"fmt"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"log"
 	"net/http"
 )
 
@@ -34,28 +32,13 @@ func (s *Server) RegisterRoutes() http.Handler {
 			s.registerSectionsRoute(protected)
 		}
 
+		public := v1.Group("")
+		{
+			public.Static("/static", "./photos")
+			s.registerPhotosRoute(public)
+		}
+
 	}
 
 	return r
-}
-
-func (s *Server) HelloWorldHandler(c *gin.Context) {
-
-	file, err := c.FormFile("file")
-
-	if err != nil {
-		s.infoLog.Println(err)
-		s.Fail(c, http.StatusBadRequest, "Error Retrieving The File From Body")
-		return
-	}
-
-	log.Println(file.Filename)
-	err = c.SaveUploadedFile(file, "./files/"+file.Filename)
-
-	if err != nil {
-		s.infoLog.Println(err)
-		s.Fail(c, http.StatusBadRequest, "Error Uploading The File")
-		return
-	}
-	c.String(http.StatusOK, fmt.Sprintf("'%s' uploaded!", file.Filename))
 }

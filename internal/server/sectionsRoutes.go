@@ -9,7 +9,7 @@ import (
 )
 
 func (s *Server) registerSectionsRoute(rg *gin.RouterGroup) {
-	sections := rg.Group("/sections")
+	sections := rg.Group("/section")
 	{
 		write := sections.Group("")
 		{
@@ -17,7 +17,7 @@ func (s *Server) registerSectionsRoute(rg *gin.RouterGroup) {
 
 			write.POST("", s.CreateSectionHandler)
 			write.PUT("", s.UpdateSectionHandler)
-			write.DELETE(":id", s.RemoveSectionHandler)
+			write.DELETE("/:id", s.RemoveSectionHandler)
 		}
 
 		read := sections.Group("")
@@ -25,7 +25,7 @@ func (s *Server) registerSectionsRoute(rg *gin.RouterGroup) {
 			read.Use(s.EditorMiddleware())
 
 			read.GET("/list", s.ListSectionsHandler)
-			read.GET(":id", s.GetSectionHandler)
+			read.GET("/:id", s.GetSectionHandler)
 		}
 
 	}
