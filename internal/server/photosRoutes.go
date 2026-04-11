@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 )
 
 func (s *Server) registerPhotosRoute(rg *gin.RouterGroup) {
@@ -122,6 +123,12 @@ func (s *Server) UpdatePhotoHandler(c *gin.Context) {
 		return
 	}
 
+	if newPhotoReq.PhotoName == strings.TrimSuffix(filepath.Base(oldPhoto.DefaultPath), filepath.Ext(oldPhoto.DefaultPath)) {
+		s.infoLog.Println("The path must be different then the default photo")
+		s.Fail(c, http.StatusBadRequest, "Error the same name is already present in the file system")
+		return
+	}
+
 	if newPhotoReq.Photo != nil {
 		err := SavePhotoAndSetPath(c, &newPhotoReq, section)
 
@@ -183,6 +190,28 @@ func (s *Server) ResetDefaultPathHandler(c *gin.Context) {
 		s.infoLog.Println(err)
 		s.Fail(c, http.StatusBadRequest, "error converting the id path param")
 		return
+	}
+
+	oldPhoto, err := s.models.PhotoModel.Get(c.Request.Context(), id)
+
+	if err != nil {
+		if errors.Is(err, database.NotFoundError) {
+			s.infoLog.Printf("error: %v", err)
+			s.Fail(c, http.StatusNotFound, "Not Found")
+			return
+		}
+
+		s.infoLog.Printf("error: %v", err)
+		s.Fail(c, http.StatusBadRequest, "Error resetting the path to default")
+		return
+	}
+
+	if oldPhoto.Path != oldPhoto.DefaultPath {
+		if err := os.Remove(oldPhoto.Path); err != nil {
+			s.infoLog.Printf("error: %v", err)
+			s.Fail(c, http.StatusBadRequest, "error deleting the file")
+			return
+		}
 	}
 
 	err = s.models.PhotoModel.ResetDefaultPath(c.Request.Context(), id)

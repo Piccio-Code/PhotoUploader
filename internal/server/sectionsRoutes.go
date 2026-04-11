@@ -13,7 +13,7 @@ func (s *Server) registerSectionsRoute(rg *gin.RouterGroup) {
 	{
 		write := sections.Group("")
 		{
-			write.Use(s.AdminMiddleware())
+			write.Use(s.AuthMiddleware(), s.AdminMiddleware())
 
 			write.POST("", s.CreateSectionHandler)
 			write.PUT("", s.UpdateSectionHandler)
@@ -22,8 +22,6 @@ func (s *Server) registerSectionsRoute(rg *gin.RouterGroup) {
 
 		read := sections.Group("")
 		{
-			read.Use(s.EditorMiddleware())
-
 			read.GET("/list", s.ListSectionsHandler)
 			read.GET("/:id", s.GetSectionHandler)
 		}
