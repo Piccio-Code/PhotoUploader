@@ -120,8 +120,6 @@ func (s *Server) FromFirebaseUserToResponse(userFirebase *auth.UserRecord) (user
 	if ok {
 		role, ok = roleC.(string)
 
-		s.infoLog.Println(role)
-
 		if !ok {
 			return UserResponse{}, errors.New("error converting the role to string")
 		}

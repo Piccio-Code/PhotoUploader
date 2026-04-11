@@ -142,6 +142,10 @@ func (s *Server) UpdatePhotoHandler(c *gin.Context) {
 		newPhotoReq.Path = oldPhoto.Path
 	}
 
+	if newPhotoReq.AltText == "" {
+		newPhotoReq.AltText = oldPhoto.AltText
+	}
+
 	reorder := newPhotoReq.Position != 0
 
 	if newPhotoReq.Position == 0 {
