@@ -39,3 +39,8 @@ FirebaseAdminCredential.json
 # Photos Folder
 
 photos
+
+# .md prompts
+
+DESIGNER_AI_DASHBOARD_GUIDE.md
+FRONTEND_AI_GUIDE.md
