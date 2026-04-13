@@ -22,13 +22,13 @@ func (s *Server) RegisterRoutes() http.Handler {
 	v1 := r.Group("/api/v1")
 
 	{
-		v1.GET("/metrics", gin.WrapH(promhttp.Handler()))
-
 		protected := v1.Group("")
 		{
 			protected.Use(s.AuthMiddleware())
 
 			s.registerUserRoute(protected)
+			protected.GET("/metrics", gin.WrapH(promhttp.Handler()))
+
 		}
 
 		public := v1.Group("")

@@ -4,6 +4,7 @@ import App from "./App.tsx";
 import "./index.css";
 import { AuthProvider } from "./lib/auth";
 import { ToastProvider } from "./components/Toast";
+import "./lib/env";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>

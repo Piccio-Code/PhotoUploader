@@ -3,13 +3,29 @@ package server
 import (
 	"PhotoUploader/internal/database"
 	"errors"
+	"fmt"
 	"github.com/gin-gonic/gin"
 	"net/http"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 )
+
+var safePathSegment = regexp.MustCompile(`[^a-zA-Z0-9._-]+`)
+
+func sanitizePathSegment(value string) string {
+	trimmed := strings.TrimSpace(value)
+	trimmed = strings.ReplaceAll(trimmed, string(filepath.Separator), "-")
+	trimmed = strings.ReplaceAll(trimmed, "/", "-")
+	trimmed = safePathSegment.ReplaceAllString(trimmed, "-")
+	trimmed = strings.Trim(trimmed, "-.")
+	if trimmed == "" {
+		return "section"
+	}
+	return trimmed
+}
 
 func (s *Server) registerPhotosRoute(rg *gin.RouterGroup) {
 	photos := rg.Group("/photo")
@@ -43,6 +59,11 @@ func (s *Server) CreatePhotoHandler(c *gin.Context) {
 	if err != nil {
 		s.infoLog.Printf("error: %v", err)
 		s.Fail(c, http.StatusBadRequest, "Error binding the Form")
+		return
+	}
+
+	if newPhotoReq.Photo == nil {
+		s.Fail(c, http.StatusBadRequest, "Photo file is required")
 		return
 	}
 
@@ -254,7 +275,7 @@ func (s *Server) RemovePhotoHandler(c *gin.Context) {
 		return
 	}
 
-	err = s.models.PhotoModel.Delete(c.Request.Context(), id, photo.Position)
+	err = s.models.PhotoModel.Delete(c.Request.Context(), id, photo.Position, photo.SectionId)
 	if err != nil {
 		if errors.Is(err, database.NotFoundError) {
 			s.infoLog.Printf("error: %v", err)
@@ -321,13 +342,37 @@ func (s *Server) GetPhotoHandler(c *gin.Context) {
 }
 
 func SavePhotoAndSetPath(c *gin.Context, newPhotoReq *database.PhotoRequest, section database.SectionResponse) error {
+	if newPhotoReq.Photo == nil {
+		return errors.New("missing photo file")
+	}
+
 	if newPhotoReq.PhotoName != "" {
 		newPhotoReq.Photo.Filename = newPhotoReq.PhotoName + filepath.Ext(newPhotoReq.Photo.Filename)
 	}
 
-	newPhotoReq.Path = filepath.Join("./photos/", section.Name, filepath.Base(newPhotoReq.Photo.Filename))
+	baseUploadDir, err := filepath.Abs("./photos")
+	if err != nil {
+		return err
+	}
 
-	err := c.SaveUploadedFile(newPhotoReq.Photo, newPhotoReq.Path)
+	sectionDir := fmt.Sprintf("%d-%s", section.Id, sanitizePathSegment(section.Name))
+
+	fileName := filepath.Base(newPhotoReq.Photo.Filename)
+
+	targetPath := filepath.Join(baseUploadDir, sectionDir, fileName)
+
+	relToBase, err := filepath.Rel(baseUploadDir, targetPath)
+
+	if err != nil {
+		return err
+	}
+
+	if relToBase == ".." || strings.HasPrefix(relToBase, ".."+string(filepath.Separator)) {
+		return errors.New("invalid upload path")
+	}
+	newPhotoReq.Path = targetPath
+
+	err = c.SaveUploadedFile(newPhotoReq.Photo, newPhotoReq.Path)
 	if err != nil {
 		return err
 	}

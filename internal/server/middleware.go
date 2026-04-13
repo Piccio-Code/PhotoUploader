@@ -27,22 +27,27 @@ func (s *Server) AdminMiddleware() gin.HandlerFunc {
 			return
 		}
 
-		if roleC, ok := user.CustomClaims["role"]; ok {
-			role, ok := roleC.(string)
+		roleC, ok := user.CustomClaims["role"]
+		if !ok {
+			s.infoLog.Println("missing role claim")
+			s.Fail(c, http.StatusUnauthorized, "Unauthorized User")
+			c.Abort()
+			return
+		}
 
-			if !ok {
-				s.infoLog.Println("role conversion problem")
-				s.Fail(c, http.StatusUnauthorized, "Unauthorized User")
-				c.Abort()
-				return
-			}
+		role, ok := roleC.(string)
+		if !ok {
+			s.infoLog.Println("role conversion problem")
+			s.Fail(c, http.StatusUnauthorized, "Unauthorized User")
+			c.Abort()
+			return
+		}
 
-			if role != "admin" {
-				s.infoLog.Println("admin auth problem")
-				s.Fail(c, http.StatusUnauthorized, "Unauthorized User")
-				c.Abort()
-				return
-			}
+		if role != "admin" {
+			s.infoLog.Println("admin auth problem")
+			s.Fail(c, http.StatusUnauthorized, "Unauthorized User")
+			c.Abort()
+			return
 		}
 
 		c.Next()
@@ -67,22 +72,27 @@ func (s *Server) EditorMiddleware() gin.HandlerFunc {
 			return
 		}
 
-		if roleC, ok := user.CustomClaims["role"]; ok {
-			role, ok := roleC.(string)
+		roleC, ok := user.CustomClaims["role"]
+		if !ok {
+			s.infoLog.Println("missing role claim")
+			s.Fail(c, http.StatusUnauthorized, "Unauthorized User")
+			c.Abort()
+			return
+		}
 
-			if !ok {
-				s.infoLog.Println("role conversion problem")
-				s.Fail(c, http.StatusUnauthorized, "Unauthorized User")
-				c.Abort()
-				return
-			}
+		role, ok := roleC.(string)
+		if !ok {
+			s.infoLog.Println("role conversion problem")
+			s.Fail(c, http.StatusUnauthorized, "Unauthorized User")
+			c.Abort()
+			return
+		}
 
-			if role != "admin" && role != "editor" {
-				s.infoLog.Println("role auth problem, the role isn't admin or editor")
-				s.Fail(c, http.StatusUnauthorized, "Unauthorized User")
-				c.Abort()
-				return
-			}
+		if role != "admin" && role != "editor" {
+			s.infoLog.Println("role auth problem, the role isn't admin or editor")
+			s.Fail(c, http.StatusUnauthorized, "Unauthorized User")
+			c.Abort()
+			return
 		}
 
 		c.Next()

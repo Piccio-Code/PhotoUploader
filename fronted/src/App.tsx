@@ -1,13 +1,14 @@
-import { useEffect } from "react";
+import { lazy, Suspense, useEffect } from "react";
 import { BrowserRouter, Routes, Route, Navigate, Outlet, useLocation, useNavigate } from "react-router-dom";
 import Layout from "./components/Layout";
-import Dashboard from "./pages/Dashboard";
-import Photos from "./pages/Photos";
-import Sections from "./pages/Sections";
-import Users from "./pages/Users";
-import Login from "./pages/Login";
 import { useAuth, type Role } from "./lib/auth";
 import { ShieldOff } from "lucide-react";
+
+const Dashboard = lazy(() => import("./pages/Dashboard"));
+const Photos = lazy(() => import("./pages/Photos"));
+const Sections = lazy(() => import("./pages/Sections"));
+const Users = lazy(() => import("./pages/Users"));
+const Login = lazy(() => import("./pages/Login"));
 
 function UnauthorizedRedirect() {
   const navigate = useNavigate();
@@ -55,26 +56,28 @@ export default function App() {
   return (
     <BrowserRouter>
       <UnauthorizedRedirect />
-      <Routes>
-        <Route path="/login" element={<Login />} />
+      <Suspense fallback={<div className="p-8 text-outline">Loading…</div>}>
+        <Routes>
+          <Route path="/login" element={<Login />} />
 
-        <Route element={<RequireAuth />}>
-          <Route path="/" element={<Layout />}>
-            <Route index element={<Dashboard />} />
+          <Route element={<RequireAuth />}>
+            <Route path="/" element={<Layout />}>
+              <Route index element={<Dashboard />} />
 
-            <Route element={<RequireRole roles={["admin", "editor"]} />}>
-              <Route path="photos" element={<Photos />} />
-            </Route>
+              <Route element={<RequireRole roles={["admin", "editor"]} />}>
+                <Route path="photos" element={<Photos />} />
+              </Route>
 
-            <Route element={<RequireRole roles={["admin"]} />}>
-              <Route path="sections" element={<Sections />} />
-              <Route path="users" element={<Users />} />
+              <Route element={<RequireRole roles={["admin"]} />}>
+                <Route path="sections" element={<Sections />} />
+                <Route path="users" element={<Users />} />
+              </Route>
             </Route>
           </Route>
-        </Route>
 
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </Suspense>
     </BrowserRouter>
   );
 }

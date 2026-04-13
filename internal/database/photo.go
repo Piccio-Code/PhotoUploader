@@ -41,6 +41,7 @@ type PhotoResponse struct {
 	DefaultPath string    `json:"default_path,omitempty"`
 	Position    int       `json:"position,omitempty"`
 	AltText     string    `json:"altText,omitempty"`
+	SectionId   int       `json:"section_id,omitempty"`
 	CreatedAt   time.Time `json:"created_at"`
 	UpdatedAt   time.Time `json:"updated_at"`
 }
@@ -58,7 +59,7 @@ func (p *PhotoModel) ListBySection(ctx context.Context, sectionId int) ([]PhotoR
 	defer cancel()
 
 	query := `
-		SELECT id, path, default_path, position, alt_text, created_at, updated_at
+		SELECT id, path, default_path, position, alt_text, section_id, created_at, updated_at
 		FROM photos
 		WHERE section_id = $1
 		ORDER BY position`
@@ -72,7 +73,7 @@ func (p *PhotoModel) ListBySection(ctx context.Context, sectionId int) ([]PhotoR
 	var result []PhotoResponse
 	for rows.Next() {
 		var photo PhotoResponse
-		err := rows.Scan(&photo.Id, &photo.Path, &photo.DefaultPath, &photo.Position, &photo.AltText, &photo.CreatedAt, &photo.UpdatedAt)
+		err := rows.Scan(&photo.Id, &photo.Path, &photo.DefaultPath, &photo.Position, &photo.AltText, &photo.SectionId, &photo.CreatedAt, &photo.UpdatedAt)
 		if err != nil {
 			return nil, err
 		}
@@ -103,12 +104,12 @@ func (p *PhotoModel) Create(ctx context.Context, newPhoto PhotoRequest) (PhotoRe
 	query := `
 		INSERT INTO photos (path, alt_text, section_id, created_at, updated_at, default_path, position)
 		VALUES ($1, $2, $3, NOW(), NOW(), $4, $5)
-		RETURNING id, path, default_path, position, alt_text, created_at, updated_at`
+		RETURNING id, path, default_path, position, alt_text, section_id, created_at, updated_at`
 
 	var photo PhotoResponse
 
 	err = tx.QueryRow(ctx, query, newPhoto.Path, newPhoto.AltText, newPhoto.SectionId, newPhoto.Path, newPhoto.Position).
-		Scan(&photo.Id, &photo.Path, &photo.DefaultPath, &photo.Position, &photo.AltText, &photo.CreatedAt, &photo.UpdatedAt)
+		Scan(&photo.Id, &photo.Path, &photo.DefaultPath, &photo.Position, &photo.AltText, &photo.SectionId, &photo.CreatedAt, &photo.UpdatedAt)
 
 	if err != nil {
 		if isDuplicateKeyError(err) {
@@ -131,13 +132,13 @@ func (p *PhotoModel) Get(ctx context.Context, id int) (PhotoResponse, error) {
 	defer cancel()
 
 	query := `
-		SELECT id, path, default_path, position, alt_text, created_at, updated_at
+		SELECT id, path, default_path, position, alt_text, section_id, created_at, updated_at
 		FROM photos
 		WHERE id = $1`
 
 	var photo PhotoResponse
 	err := p.DB.QueryRow(ctx, query, id).
-		Scan(&photo.Id, &photo.Path, &photo.DefaultPath, &photo.Position, &photo.AltText, &photo.CreatedAt, &photo.UpdatedAt)
+		Scan(&photo.Id, &photo.Path, &photo.DefaultPath, &photo.Position, &photo.AltText, &photo.SectionId, &photo.CreatedAt, &photo.UpdatedAt)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return PhotoResponse{}, NotFoundError
@@ -237,7 +238,7 @@ func (p *PhotoModel) Update(ctx context.Context, newPhoto PhotoRequest, reorder 
 	return tx.Commit(ctx)
 }
 
-func (p *PhotoModel) Delete(ctx context.Context, id, position int) error {
+func (p *PhotoModel) Delete(ctx context.Context, id, position, sectionId int) error {
 	ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
 	defer cancel()
 
@@ -262,9 +263,10 @@ func (p *PhotoModel) Delete(ctx context.Context, id, position int) error {
 	query = `		
 		UPDATE photos
 		SET position = position - 1
-		WHERE position >= $1`
+		WHERE section_id = $1
+			AND position >= $2`
 
-	_, err = tx.Exec(ctx, query, position)
+	_, err = tx.Exec(ctx, query, sectionId, position)
 	if err != nil {
 		return err
 	}

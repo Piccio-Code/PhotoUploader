@@ -50,13 +50,13 @@ export default function Photos() {
       const data = await api.get<{ sections: Section[] }>("/section/list");
       const list = data?.sections ?? [];
       setSections(list);
-      if (list.length > 0 && selectedSectionId === null) {
-        setSelectedSectionId(list[0].id);
+      if (list.length > 0) {
+        setSelectedSectionId((current) => current ?? list[0].id);
       }
     } catch {
       // sections may fail if user is editor without section read
     }
-  }, [selectedSectionId]);
+  }, []);
 
   const fetchPhotos = useCallback(async () => {
     if (selectedSectionId === null) {

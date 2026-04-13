@@ -3,6 +3,14 @@ import { Navigate, useLocation, useNavigate } from "react-router-dom";
 import { AlertCircle } from "lucide-react";
 import { useAuth } from "../lib/auth";
 
+function safeInternalPath(value: string | undefined): string {
+  if (!value) return "/";
+  if (!value.startsWith("/")) return "/";
+  if (value.startsWith("//")) return "/";
+  if (value.includes("://")) return "/";
+  return value;
+}
+
 function GoogleIcon({ className }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 24 24" width="20" height="20">
@@ -21,7 +29,9 @@ export default function Login() {
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  const from = (location.state as { from?: { pathname: string } })?.from?.pathname ?? "/";
+  const from = safeInternalPath(
+    (location.state as { from?: { pathname?: string } })?.from?.pathname,
+  );
 
   if (!loading && user) {
     return <Navigate to={from} replace />;
@@ -34,7 +44,7 @@ export default function Login() {
     setSubmitting(false);
 
     if (result.error) {
-      setError(result.error);
+      setError("Accesso non riuscito. Riprova tra qualche secondo.");
       return;
     }
     navigate(from, { replace: true });

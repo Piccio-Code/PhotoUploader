@@ -1,7 +1,6 @@
 import { auth } from "./firebase";
+import { API_BASE_URL, API_TIMEOUT_MS } from "./env";
 import type { ApiResponse } from "./types";
-
-const BASE_URL = import.meta.env.VITE_API_BASE_URL as string;
 
 async function getAuthHeaders(): Promise<Record<string, string>> {
   const user = auth.currentUser;
@@ -27,7 +26,20 @@ async function request<T>(
     body = JSON.stringify(opts.body);
   }
 
-  const res = await fetch(`${BASE_URL}${path}`, { method, headers, body });
+  const controller = new AbortController();
+  const timeoutId = window.setTimeout(() => controller.abort(), API_TIMEOUT_MS);
+  const endpoint = `${API_BASE_URL}${path}`;
+  let res: Response;
+  try {
+    res = await fetch(endpoint, { method, headers, body, signal: controller.signal });
+  } catch (err) {
+    if (err instanceof DOMException && err.name === "AbortError") {
+      throw new Error("Richiesta scaduta. Controlla la connessione e riprova.");
+    }
+    throw new Error("Errore di connessione al server.");
+  } finally {
+    window.clearTimeout(timeoutId);
+  }
 
   if (res.status === 401) {
     window.dispatchEvent(new CustomEvent("api:unauthorized"));
@@ -46,7 +58,7 @@ async function request<T>(
 
   const envelope: ApiResponse<T> = await res.json();
   if (!envelope.success) {
-    throw new Error(envelope.error ?? `Errore ${res.status}`);
+    throw new Error(envelope.error ? String(envelope.error) : `Errore ${res.status}`);
   }
   return envelope.data as T;
 }
