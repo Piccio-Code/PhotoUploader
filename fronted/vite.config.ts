@@ -11,7 +11,13 @@ export default defineConfig({
     },
   },
   server: {
-    allowedHosts: ["admin.pasticceriaginella.com", "localhost", "127.0.0.1"],
+    allowedHosts: [
+      "admin.pasticceriaginella.com",
+      "pasticceriaginella.com",
+      "www.pasticceriaginella.com",
+      "localhost",
+      "127.0.0.1",
+    ],
     // HMR is disabled in AI Studio via DISABLE_HMR env var.
     // Do not modify - file watching is disabled to prevent flickering during agent edits.
     hmr: process.env.DISABLE_HMR !== 'true',
