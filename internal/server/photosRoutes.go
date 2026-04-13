@@ -359,6 +359,7 @@ func SavePhotoAndSetPath(c *gin.Context, newPhotoReq *database.PhotoRequest, sec
 
 	fileName := filepath.Base(newPhotoReq.Photo.Filename)
 
+	relativePath := filepath.Join("photos", sectionDir, fileName)
 	targetPath := filepath.Join(baseUploadDir, sectionDir, fileName)
 
 	relToBase, err := filepath.Rel(baseUploadDir, targetPath)
@@ -370,7 +371,7 @@ func SavePhotoAndSetPath(c *gin.Context, newPhotoReq *database.PhotoRequest, sec
 	if relToBase == ".." || strings.HasPrefix(relToBase, ".."+string(filepath.Separator)) {
 		return errors.New("invalid upload path")
 	}
-	newPhotoReq.Path = targetPath
+	newPhotoReq.Path = filepath.ToSlash(relativePath)
 
 	err = c.SaveUploadedFile(newPhotoReq.Photo, newPhotoReq.Path)
 	if err != nil {
